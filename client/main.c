@@ -31,7 +31,7 @@ void deleteClient(Client* client) {
   free(client);
 }
 
-void* clientThread(void* arg) {
+void* serverThread(void* arg) {
   Client* client = (Client*)arg;
   while (true) {
     char buf[MAX_BUF_LEN];
@@ -75,7 +75,7 @@ void setClient(Client* client) {
     return;
   }
 
-  pthread_create(&client->thread, NULL, (void*)clientThread, client);
+  pthread_create(&client->thread, NULL, (void*)serverThread, client);
   client->isConnected = true;
 }
 
