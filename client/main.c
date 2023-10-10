@@ -35,13 +35,14 @@ void* clientThread(void* arg) {
   Client* client = (Client*)arg;
   while (true) {
     char buf[MAX_BUF_LEN];
-    int  len = recv(client->socket, buf, MAX_BUF_LEN, 0);
+    bzero(buf, MAX_BUF_LEN);
+    int len = recv(client->socket, buf, MAX_BUF_LEN, 0);
     if (len <= 0) {
       logMessage(ERROR, "server closed\n");
       client->isConnected = false;
       pthread_exit(NULL);
     }
-    ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
+    ProtoPacket* pPacket = createPacket(0, len - HEAD_LEN, NULL);
     deserialization((uint8_t*)buf, pPacket);
 
     LogType type;
@@ -57,13 +58,10 @@ void* clientThread(void* arg) {
 }
 
 void setClient(Client* client) {
-  // logMessage(CLIENT, "Please input server ip: ");
-  // scanf("%s", client->serverIP);
-  // logMessage(CLIENT, "Please input server port: ");
-  // scanf("%d", &client->serverPort);
-  client->serverPort = 5377;
-  char* ip           = "127.0.0.1";
-  memcpy(client->serverIP, ip, strlen(ip));
+  logMessage(CLIENT, "Please input server ip: ");
+  scanf("%s", client->serverIP);
+  logMessage(CLIENT, "Please input server port: ");
+  scanf("%d", &client->serverPort);
 
   // set socket for client
   client->socket = socket(AF_INET, SOCK_STREAM, 0);

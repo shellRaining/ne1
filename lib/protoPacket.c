@@ -9,11 +9,12 @@ ProtoPacket* createPacket(uint16_t type, uint32_t len, char* msg) {
   ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
   memset(pPacket, 0, sizeof(ProtoPacket));
 
-  pPacket->head.type   = type;
-  pPacket->head.len    = len;
-  pPacket->msg = malloc(len);
+  pPacket->head.type = type;
+  pPacket->head.len  = len;
+  pPacket->msg       = malloc(len);
   memset(pPacket->msg, 0, len);
-  memcpy(pPacket->msg, msg, len);
+  if (msg != NULL)
+    memcpy(pPacket->msg, msg, len);
   return pPacket;
 }
 

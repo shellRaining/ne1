@@ -3,8 +3,8 @@
 CC = gcc
 OBJS = $(wildcard *.c)
 OUTDIR = ../bin
-PROG = client
-CFLAGS = -I../include -L../lib
+PROG = server
+CFLAGS = -I../include
 LIBS = $(wildcard ../lib/*.c)
 
 all: $(OBJS)

@@ -1,2 +1,7 @@
 client/test/node_modules
 client/a.out
+bin
+client/.cache/clangd/index
+server/.cache/clangd/index
+client/compile_commands.json
+server/compile_commands.json

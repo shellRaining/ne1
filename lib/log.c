@@ -41,4 +41,5 @@ void logMessage(LogType t, char* msg, ...) {
     break;
   }
   va_end(args);
+  printf("\n");
 }

@@ -10,6 +10,7 @@ const server = net.createServer((socket) => {
     const bytes = hex.match(/.{1,2}/g);
     if(bytes == null) return;
     console.log(bytes.join(" "));
+    socket.write(data);
   });
 });
 
