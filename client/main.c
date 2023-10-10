@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 
 #include "protoPacket.h"
+#include "log.h"
 
 #define MAX_BUF_LEN 1024
 
@@ -17,8 +18,6 @@ typedef struct _client {
   pthread_t thread;
   int       socket;
 } Client;
-
-typedef enum _logType { CLIENT, SERVER, OTHER_CLIENT } LogType;
 
 void initClient(Client* client) {
   client->isConnected = false;
@@ -32,28 +31,15 @@ void deleteClient(Client* client) {
   free(client);
 }
 
-// just a wrapper of printf, print different color text by type
-// green for client
-// blue for server
-// yellow for other client
-void logMessage(LogType t, char* msg) {
-  switch (t) {
-  case CLIENT: printf("\033[0;32m%s\033[0m", msg); break;
-  case SERVER: printf("\033[0;34m%s\033[0m", msg); break;
-  case OTHER_CLIENT: printf("\033[0;33m%s\033[0m", msg); break;
-  default: printf("%s", msg); break;
-  }
-}
-
 void* clientThread(void* arg) {
   Client* client = (Client*)arg;
   while (true) {
     char buf[MAX_BUF_LEN];
     int  len = recv(client->socket, buf, MAX_BUF_LEN, 0);
     if (len <= 0) {
-      logMessage(CLIENT, "server closed\n");
+      logMessage(ERROR, "server closed\n");
       client->isConnected = false;
-      return NULL;
+      pthread_exit(NULL);
     }
     ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
     deserialization((uint8_t*)buf, pPacket);
@@ -67,7 +53,7 @@ void* clientThread(void* arg) {
     logMessage(type, pPacket->msg);
     free(pPacket);
   }
-  return NULL;
+  pthread_exit(NULL);
 }
 
 void setClient(Client* client) {
@@ -91,7 +77,6 @@ void setClient(Client* client) {
     return;
   }
 
-  // create thread for client (client only used to receive message from server and log it)
   pthread_create(&client->thread, NULL, (void*)clientThread, client);
   client->isConnected = true;
 }
@@ -117,32 +102,27 @@ void queryServerName(int socket) {
 }
 
 void queryActiveClient(int socket) {
-  ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
+  ProtoPacket* pPacket = createPacket(QUERY_ACTIVE, 0, NULL);
   char         buf[MAX_BUF_LEN];
-  memset(pPacket, 0, sizeof(ProtoPacket));
   memset(buf, 0, sizeof(buf));
 
-  pPacket->head.type = QUERY_ACTIVE;
   serialization((uint8_t*)buf, pPacket);
   send(socket, buf, HEAD_LEN, 0);
   free(pPacket);
 }
 
 void querySendMsg(int socket) {
-  ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
-  char         buf[MAX_BUF_LEN];
-  memset(pPacket, 0, sizeof(ProtoPacket));
-  memset(buf, 0, sizeof(buf));
-
-  pPacket->head.type = QUERY_SEND_MSG;
   logMessage(CLIENT, "Please input message: ");
   char* msg = malloc(MAX_BUF_LEN);
-  scanf("%s", msg);
-  pPacket->msg      = msg;
-  pPacket->head.len = strlen(msg);
+  memset(msg, 0, MAX_BUF_LEN);
+  fgets(msg, MAX_BUF_LEN, stdin);
+
+  ProtoPacket* pPacket = createPacket(QUERY_SEND_MSG, strlen(msg), msg);
+  char         buf[MAX_BUF_LEN];
+  memset(buf, 0, sizeof(buf));
+
   serialization((uint8_t*)buf, pPacket);
   send(socket, buf, pPacket->head.len + HEAD_LEN, 0);
-
   free(msg);
   free(pPacket);
 }
@@ -165,19 +145,16 @@ int main(int argc, char* argv[]) {
     } else {
       logMessage(CLIENT, "1. get server time\n2. get server name\n3. get "
                          "active client\n4. send message to client\n5. exit\n");
-      int choice;
+      int choice = 0;
       scanf("%d", &choice);
+      char c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
       switch (choice) {
       case 1: queryServerTime(client->socket); break;
       case 2: queryServerName(client->socket); break;
       case 3: queryActiveClient(client->socket); break;
-      case 4:
-        querySendMsg(client->socket);
-        break;
-        // case 1:
-        // case 2:
-        // case 3:
-        // case 4: break;
+      case 4: querySendMsg(client->socket); break;
       case 5: {
         deleteClient(client);
         return EXIT_SUCCESS;

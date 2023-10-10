@@ -5,12 +5,14 @@
 
 #include "protoPacket.h"
 
-ProtoPacket* createPacket(uint16_t type, uint32_t len, uint8_t* msg) {
+ProtoPacket* createPacket(uint16_t type, uint32_t len, char* msg) {
   ProtoPacket* pPacket = malloc(sizeof(ProtoPacket));
   memset(pPacket, 0, sizeof(ProtoPacket));
 
   pPacket->head.type   = type;
   pPacket->head.len    = len;
+  pPacket->msg = malloc(len);
+  memset(pPacket->msg, 0, len);
   memcpy(pPacket->msg, msg, len);
   return pPacket;
 }
@@ -35,10 +37,6 @@ void serialization(uint8_t* pdata, ProtoPacket* pPacket) {
   // packet data
   memcpy(pdata, pPacket->msg, pPacket->head.len);
 
-  // print the binary data in string
-  for (int i = 0; i < pPacket->head.len + HEAD_LEN; i++) {
-    printf("%02x ", *(pdata - pPacket->head.len - HEAD_LEN + i));
-  }
   printf("\n");
 }
 void deserialization(uint8_t* pdata, ProtoPacket* pPacket) {

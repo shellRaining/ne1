@@ -5,7 +5,11 @@ import * as net from "node:net";
 
 const server = net.createServer((socket) => {
   socket.on("data", (data) => {
-    console.log(data.toString());
+    const hex = data.toString("hex");
+    if(hex == null) return;
+    const bytes = hex.match(/.{1,2}/g);
+    if(bytes == null) return;
+    console.log(bytes.join(" "));
   });
 });
 
