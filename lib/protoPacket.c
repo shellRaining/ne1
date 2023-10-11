@@ -18,7 +18,7 @@ ProtoPacket* createPacket(uint16_t type, uint32_t len, char* msg) {
   return pPacket;
 }
 
-void serialization(uint8_t* pdata, ProtoPacket* pPacket) {
+uint32_t serialization(uint8_t* pdata, ProtoPacket* pPacket) {
   // version number
   *pdata = 1;
   pdata++;
@@ -38,7 +38,7 @@ void serialization(uint8_t* pdata, ProtoPacket* pPacket) {
   // packet data
   memcpy(pdata, pPacket->msg, pPacket->head.len);
 
-  printf("\n");
+  return HEAD_LEN + pPacket->head.len;
 }
 void deserialization(uint8_t* pdata, ProtoPacket* pPacket) {
   // version number

@@ -27,5 +27,5 @@ typedef struct _protoPacket {
 } ProtoPacket;
 
 ProtoPacket* createPacket(uint16_t type, uint32_t len, char* msg);
-void         serialization(uint8_t* pdata, ProtoPacket* pPacket);
+uint32_t     serialization(uint8_t* pdata, ProtoPacket* pPacket);
 void         deserialization(uint8_t* pdata, ProtoPacket* pPacket);
