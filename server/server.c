@@ -36,7 +36,7 @@ void initSever(Server* pServer) {
 }
 
 void handleTime(int clientSocket, ClientInfo clientInfo) {
-  logMessage(SERVER, "QUERY_TIME from %d", clientInfo.id);
+  logMessage(SERVER, "QUERY_TIME from %d\n", clientInfo.id);
   time_t     now      = time(NULL);
   struct tm* timeinfo = localtime(&now);
   char       buf[64];
@@ -53,7 +53,7 @@ void handleTime(int clientSocket, ClientInfo clientInfo) {
 }
 
 void handleName(int clientSocket, ClientInfo clientInfo) {
-  logMessage(SERVER, "QUERY_NAME from %d", clientInfo.id);
+  logMessage(SERVER, "QUERY_NAME from %d\n", clientInfo.id);
   char hostname[64];
   bzero(hostname, sizeof(hostname));
   gethostname(hostname, sizeof(hostname));
@@ -69,7 +69,7 @@ void handleName(int clientSocket, ClientInfo clientInfo) {
 
 void handleActive(int clientSocket, Server* server, int idx) {
   ClientInfo clientInfo = server->clientInfoList[idx];
-  logMessage(SERVER, "QUERY_ACTIVE from %d", clientInfo.id);
+  logMessage(SERVER, "QUERY_ACTIVE from %d\n", clientInfo.id);
   char buf[MAX_BUF_LEN];
   bzero(buf, sizeof(buf));
   for (int i = 0; i < MAX_WAIT_NUM; i++) {
@@ -91,7 +91,7 @@ void handleActive(int clientSocket, Server* server, int idx) {
 // TODO: handle args
 void handleSendMsg(int clientSocket, Server* server, int idx, ProtoPacket* userPacket) {
   ClientInfo clientInfo = server->clientInfoList[idx];
-  logMessage(SERVER, "QUERY_SEND_MSG from %d", clientInfo.id);
+  logMessage(SERVER, "QUERY_SEND_MSG from %d\n", clientInfo.id);
   char buf[MAX_BUF_LEN];
   bzero(buf, sizeof(buf));
 
@@ -102,10 +102,6 @@ void handleSendMsg(int clientSocket, Server* server, int idx, ProtoPacket* userP
     logMessage(ERROR, "invalid index %d\n", sendIdx);
     sprintf(buf, "invalid index %d\n", sendIdx);
   } else {
-    // prepare msg return to client
-    logMessage(SERVER, "send msg to %d: %s", sendIdx, userPacket->msg + sizeof(int));
-    sprintf(buf, "success send msg to %d\n", sendIdx);
-
     // prepare msg to the user we want to send
     char sendMsg[MAX_BUF_LEN];
     bzero(sendMsg, sizeof(sendMsg));
@@ -113,6 +109,11 @@ void handleSendMsg(int clientSocket, Server* server, int idx, ProtoPacket* userP
     ProtoPacket* pPacket = createPacket(REPLY_SEND_MSG, strlen(sendMsg), sendMsg);
     int len              = serialization((uint8_t*)buf, pPacket);
     send(server->clientInfoList[sendIdx].socket, buf, len, 0);
+
+    // prepare msg return to client
+    bzero(buf, sizeof(buf));
+    logMessage(SERVER, "send msg to %d: %s\n", sendIdx, userPacket->msg + sizeof(int));
+    sprintf(buf, "success send msg to %d\n", sendIdx);
   }
   ProtoPacket* pPacket = createPacket(REPLY_SEND_MSG, strlen(buf), buf);
 
