@@ -46,8 +46,14 @@ void* serverThread(void* arg) {
     LogType type;
     if (pPacket->head.type == REPLY_SEND_MSG) {
       type = OTHER_CLIENT;
-    } else {
+    } else if (pPacket->head.type == REPLY_TIME || pPacket->head.type == REPLY_NAME
+               || pPacket->head.type == REPLY_ACTIVE) {
       type = SERVER;
+    } else {
+      type = ERROR;
+      logMessage(type, "unknown packet type\n");
+      free(pPacket);
+      continue;
     }
     logMessage(type, pPacket->msg);
     free(pPacket);
@@ -110,12 +116,17 @@ void queryActiveClient(int socket) {
 }
 
 void querySendMsg(int socket) {
+  logMessage(CLIENT, "Please input client id: ");
+  int id;
+  scanf("%d", &id);
+  getchar();
   logMessage(CLIENT, "Please input message: ");
   char* msg = malloc(MAX_BUF_LEN);
   memset(msg, 0, MAX_BUF_LEN);
-  fgets(msg, MAX_BUF_LEN, stdin);
+  memcpy(msg, &id, sizeof(int));
+  fgets(msg + sizeof(int), MAX_BUF_LEN - sizeof(id), stdin);
 
-  ProtoPacket* pPacket = createPacket(QUERY_SEND_MSG, strlen(msg), msg);
+  ProtoPacket* pPacket = createPacket(QUERY_SEND_MSG, sizeof(id) + strlen(msg + sizeof(int)), msg);
   char         buf[MAX_BUF_LEN];
   memset(buf, 0, sizeof(buf));
 

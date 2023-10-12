@@ -67,6 +67,63 @@ void handleName(int clientSocket, ClientInfo clientInfo) {
   free(pPacket);
 }
 
+void handleActive(int clientSocket, Server* server, int idx) {
+  ClientInfo clientInfo = server->clientInfoList[idx];
+  logMessage(SERVER, "QUERY_ACTIVE from %d", clientInfo.id);
+  char buf[MAX_BUF_LEN];
+  bzero(buf, sizeof(buf));
+  for (int i = 0; i < MAX_WAIT_NUM; i++) {
+    if (server->clientInfoList[i].port != 0) {
+      ClientInfo idxInfo = server->clientInfoList[i];
+      sprintf(buf + strlen(buf), "%d %s %d\n", idxInfo.id, idxInfo.ip, idxInfo.port);
+    }
+  }
+  ProtoPacket* pPacket = createPacket(REPLY_ACTIVE, strlen(buf), buf);
+
+  // serialization
+  char replyInfo[MAX_BUF_LEN];
+  bzero(replyInfo, MAX_BUF_LEN);
+  uint32_t len = serialization((uint8_t*)replyInfo, pPacket);
+  send(clientSocket, replyInfo, len, 0);
+  free(pPacket);
+}
+
+// TODO: handle args
+void handleSendMsg(int clientSocket, Server* server, int idx, ProtoPacket* userPacket) {
+  ClientInfo clientInfo = server->clientInfoList[idx];
+  logMessage(SERVER, "QUERY_SEND_MSG from %d", clientInfo.id);
+  char buf[MAX_BUF_LEN];
+  bzero(buf, sizeof(buf));
+
+  // first get the index the user want to send msg to, read one int from msg
+  int sendIdx = -1;
+  memcpy(&sendIdx, userPacket->msg, sizeof(int));
+  if (sendIdx < 0 || sendIdx >= MAX_WAIT_NUM || server->clientInfoList[sendIdx].port == 0) {
+    logMessage(ERROR, "invalid index %d\n", sendIdx);
+    sprintf(buf, "invalid index %d\n", sendIdx);
+  } else {
+    // prepare msg return to client
+    logMessage(SERVER, "send msg to %d: %s", sendIdx, userPacket->msg + sizeof(int));
+    sprintf(buf, "success send msg to %d\n", sendIdx);
+
+    // prepare msg to the user we want to send
+    char sendMsg[MAX_BUF_LEN];
+    bzero(sendMsg, sizeof(sendMsg));
+    memcpy(sendMsg, userPacket->msg + sizeof(int), userPacket->head.len - sizeof(int));
+    ProtoPacket* pPacket = createPacket(REPLY_SEND_MSG, strlen(sendMsg), sendMsg);
+    int len              = serialization((uint8_t*)buf, pPacket);
+    send(server->clientInfoList[sendIdx].socket, buf, len, 0);
+  }
+  ProtoPacket* pPacket = createPacket(REPLY_SEND_MSG, strlen(buf), buf);
+
+  // serialization the info to client
+  char replyInfo[MAX_BUF_LEN];
+  bzero(replyInfo, MAX_BUF_LEN);
+  uint32_t len = serialization((uint8_t*)replyInfo, pPacket);
+  send(clientSocket, replyInfo, len, 0);
+  free(pPacket);
+}
+
 void clientThread(struct threadArgs* ta) {
   Server*            server     = ta->server;
   struct sockaddr_in clientAddr = ta->clientAddr;
@@ -77,9 +134,10 @@ void clientThread(struct threadArgs* ta) {
   for (; i < MAX_WAIT_NUM; i++)
     if (server->clientInfoList[i].port == 0)
       break;
-  server->clientInfoList[i].id   = i;
-  server->clientInfoList[i].port = ntohs(clientAddr.sin_port);
-  char* clientIP                 = inet_ntoa(clientAddr.sin_addr);
+  server->clientInfoList[i].id     = i;
+  server->clientInfoList[i].port   = ntohs(clientAddr.sin_port);
+  server->clientInfoList[i].socket = socket;
+  char* clientIP                   = inet_ntoa(clientAddr.sin_addr);
   strcpy(server->clientInfoList[i].ip, clientIP);
 
   // receive msg
@@ -108,10 +166,16 @@ void clientThread(struct threadArgs* ta) {
       handleName(socket, server->clientInfoList[i]);
       break;
     }
-
-      // case QUERY_ACTIVE: handleActive(server->clientInfoList[i]);
-      // case QUERY_SEND_MSG: handleSendMSG(server->clientInfoList[i]);
+    case QUERY_ACTIVE: {
+      handleActive(socket, server, i);
+      break;
     }
+    case QUERY_SEND_MSG: {
+      handleSendMsg(socket, server, i, pPacket);
+      break;
+    }
+    }
+    free(pPacket);
   }
 }
 

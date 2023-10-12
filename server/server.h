@@ -3,6 +3,7 @@
 typedef struct _clientInfo {
   int  id;
   int  port;
+  int  socket;
   char ip[16];
 } ClientInfo;
 
